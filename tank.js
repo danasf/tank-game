@@ -57,7 +57,6 @@
 		this.tank.draw(screen);
 		this.bodies.forEach(function(val,key) { 
 			val.draw(screen);
-			//
 		});
 
 	};
@@ -72,6 +71,7 @@
 		this.bulletLimiter = 3;
 		
 		this.turret = new Turret(90);
+		this.meter = new PowerMeter(screen,this.velocity);
 
 		var self = this;
 		this.keys = new Keyboard();
@@ -86,7 +86,6 @@
 			this.turret.angle += 2;
 		}
 		else if(this.keys.isDown(this.keys.KEYS.UP)) {
-			//this.turret.velocity += 1;
 			this.velocity.x += (this.velocity.x < 10) ? 0.2 : -0.2;
 			this.velocity.y += (this.velocity.y < 10) ? 0.2 : -0.2;
 		}
@@ -130,6 +129,8 @@
 		screen.lineWidth = 5;
 		screen.strokeStyle = 'red';
 		screen.stroke();
+
+		this.meter.draw();
 
 	};
 
@@ -243,6 +244,23 @@
 
 	};
 
+	/* Power Meter */
+
+	function PowerMeter(screen,vel) {
+		this.screen = screen;
+		this.size = { height:100, width: 60 };
+		this.velocity = vel;
+
+	};
+
+	PowerMeter.prototype.draw = function() {
+			this.screen.rect(20,20,30*this.velocity.x,20);
+	};
+
+	PowerMeter.prototype.update = function() {
+
+	};
+
 	/* Helpers */
 	var isCollidingWithMountain = function(screen,b1,mtn) {
 
@@ -286,6 +304,7 @@
 
 
 	};
+
 
 
 	 window.addEventListener('load', function() {
