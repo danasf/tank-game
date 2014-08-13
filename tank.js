@@ -43,7 +43,9 @@
 		});
 		// get rid of things that are out of lower, side bounds
 		this.bodies = this.bodies.filter(function(val) { 
-			return (val.center.y > self.size.y || val.center.x < 0 || val.center.x > self.size.x) ? false : true;
+			var offScreen = (val.center.y > self.size.y || val.center.x < 0 || val.center.x > self.size.x) ? false : true;
+			var collision = isCollidingWithMountain(null,val,self.mtns);
+			return offScreen && collision;
 		});
 
 	};
@@ -55,7 +57,7 @@
 		this.tank.draw(screen);
 		this.bodies.forEach(function(val,key) { 
 			val.draw(screen);
-			isCollidingWithMountain(screen,val,self.mtns);
+			//
 		});
 
 	};
@@ -249,23 +251,35 @@
 		if(b1.y <  400) {
 			return true;
 		} else {
-			var nearPeak = Math.floor(b1.center.x/mtn.step);
-			console.log("Nearest Peak height:",nearPeak,mtn.points[nearPeak]);
-			console.log("Bullet x,y:",b1.center.x,b1.center.y);
 
-			//console.log("A bullet is under max mountain height!");
+			// find nearest peak
+			var nearPeak = Math.floor(b1.center.x/mtn.step)-1;
+			
+			// if out of bounds
+			if(nearPeak > mtn.points.length || nearPeak < 0) {
+				nearPeak=0;
+			}
+
+			// find difference between bullet x and y and nearest peak
+			var deltaX = Math.abs(b1.center.x - mtn.points[nearPeak].x );
+			var deltaY = Math.abs(b1.center.y - mtn.points[nearPeak].y );
+			
+			// y2 - y1 / step
+			var slope = (mtn.points[nearPeak+1].y - mtn.points[nearPeak].y )/mtn.step;
+			
+			// y = mx+b! whoa, middle school algebra calling
+			var impactPoint = slope*deltaX+mtn.points[nearPeak].y;
+
+			//console.log("Impact point",impactPoint);
+			//console.log("Delta, peak and bullet:",deltaX,deltaY);
+
+			return (b1.center.y >= impactPoint ) ? false : true; 
 		}
 
-		//var col = points.every(function(res,key) {
-			//return b1.center.y > res.y && b1.center.x == res.x;
-		//});
 
 		/*if(!col) {
 			// draw crater
-			screen.arc(b1.center.x, b1.center.y, 10,0, 2 * Math.PI, false);
-			screen.fill();
-			screen.fillStyle = 'blue';
-			// stop it
+				// stop it
       		//b1.velocity.x =0;
       		//b1.velocity.y =0;
 		}*/
