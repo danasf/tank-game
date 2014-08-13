@@ -1,3 +1,15 @@
+/* 
+  _______          _       _____                      
+ |__   __|        | |     / ____|                     
+    | | __ _ _ __ | | __ | |  __  __ _ _ __ ___   ___ 
+    | |/ _` | '_ \| |/ / | | |_ |/ _` | '_ ` _ \ / _ \
+    | | (_| | | | |   <  | |__| | (_| | | | | | |  __/
+    |_|\__,_|_| |_|_|\_\  \_____|\__,_|_| |_| |_|\___|
+                                                      
+    By Dana Sniezko
+    Written at Hacker School Summer 2014
+
+*/
 ;(function() {
 
 	/* Game Logic */
@@ -57,7 +69,6 @@
 		this.tank.draw(screen);
 		this.bodies.forEach(function(val,key) { 
 			val.draw(screen);
-			//
 		});
 
 	};
@@ -72,6 +83,7 @@
 		this.bulletLimiter = 3;
 		
 		this.turret = new Turret(90);
+		this.meter = new PowerMeter(screen,this.velocity);
 
 		var self = this;
 		this.keys = new Keyboard();
@@ -79,14 +91,17 @@
 	};
 
 	Tank.prototype.update = function(game) {
-		if(this.keys.isDown(this.keys.KEYS.LEFT)) {
-			this.turret.angle -= 2;
+		if(this.keys.isDown(this.keys.KEYS.RIGHT)) {
+			console.log("turret angle",this.turret.angle);
+			this.turret.angle -= (this.turret.angle <= 0) ? 0 : 2;
+			console.log("new turret angle",this.turret.angle);
+
 		}
-		else if(this.keys.isDown(this.keys.KEYS.RIGHT)) {
-			this.turret.angle += 2;
+		else if(this.keys.isDown(this.keys.KEYS.LEFT)) {
+			console.log("turret angle",this.turret.angle);
+			this.turret.angle += (this.turret.angle >= 180) ? 0 : 2;
 		}
 		else if(this.keys.isDown(this.keys.KEYS.UP)) {
-			//this.turret.velocity += 1;
 			this.velocity.x += (this.velocity.x < 10) ? 0.2 : -0.2;
 			this.velocity.y += (this.velocity.y < 10) ? 0.2 : -0.2;
 		}
@@ -130,6 +145,8 @@
 		screen.lineWidth = 5;
 		screen.strokeStyle = 'red';
 		screen.stroke();
+
+		this.meter.draw();
 
 	};
 
@@ -243,6 +260,26 @@
 
 	};
 
+	/* Power Meter */
+
+	function PowerMeter(screen,vel) {
+		this.screen = screen;
+		this.size = { height:100, width: 60 };
+		this.velocity = vel;
+
+	};
+
+	PowerMeter.prototype.draw = function() {
+			this.screen.fillStyle = "#ffff00";
+			this.screen.rect(20,20,30*this.velocity.x,20);
+			this.screen.fill();
+
+	};
+
+	PowerMeter.prototype.update = function() {
+
+	};
+
 	/* Helpers */
 	var isCollidingWithMountain = function(screen,b1,mtn) {
 
@@ -256,7 +293,7 @@
 			var nearPeak = Math.floor(b1.center.x/mtn.step)-1;
 			
 			// if out of bounds
-			if(nearPeak > mtn.points.length || nearPeak < 0) {
+			if((nearPeak+1) > mtn.points.length-1 || nearPeak < 0) {
 				nearPeak=0;
 			}
 
@@ -265,7 +302,9 @@
 			var deltaY = Math.abs(b1.center.y - mtn.points[nearPeak].y );
 			
 			// y2 - y1 / step
-			var slope = (mtn.points[nearPeak+1].y - mtn.points[nearPeak].y )/mtn.step;
+			// need to deal with nearPeak+1 out of bounds
+			//if((nearPeak+1) > mtn.points.len) { }
+			var slope = ((mtn.points[nearPeak+1].y ) - mtn.points[nearPeak].y )/mtn.step;
 			
 			// y = mx+b! whoa, middle school algebra calling
 			var impactPoint = slope*deltaX+mtn.points[nearPeak].y;
@@ -276,13 +315,6 @@
 			return (b1.center.y >= impactPoint ) ? false : true; 
 		}
 
-
-		/*if(!col) {
-			// draw crater
-				// stop it
-      		//b1.velocity.x =0;
-      		//b1.velocity.y =0;
-		}*/
 
 
 	};
