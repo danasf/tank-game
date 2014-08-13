@@ -16,15 +16,13 @@
 		/* physics */
 		this.gravity = -2;
 
-
-
 		// initiate and draw new background
 		this.mtns = new Mountains();
 		this.mtns.generate(screen,this.size);
 
 
 		// initialize a player
-		this.tank = new Tank(game,screen,this.mtns.getPeaks());
+		this.tank = new Tank(self,screen,this.mtns.getPeaks(),Math.floor(Math.random()*8));
 
 		var tick = function() {
 			self.update();
@@ -38,46 +36,70 @@
 	};
 
 	Game.prototype.update = function() {
-		//var self = this;
-		this.tank.update(game);
+		var self = this;
+		this.tank.update(this);
 		this.bodies.forEach(function(val,key) { 
  			val.update();
 		});
+		// get rid of things that are out of lower, side bounds
+		this.bodies = this.bodies.filter(function(val) { 
+			return (val.center.y > self.size.y || val.center.x < 0 || val.center.x > self.size.x) ? false : true;
+		});
+
 	};
 
 	Game.prototype.draw = function(screen) {
+
+		var self = this;
 		this.mtns.draw(screen,this.size);
 		this.tank.draw(screen);
 		this.bodies.forEach(function(val,key) { 
 			val.draw(screen);
+			isCollidingWithMountain(screen,val,self.mtns);
 		});
 
 	};
 
 	/* Player / tank logic */
-	function Tank(game,screen,peaks) {
+	function Tank(game,screen,peaks,start) {
 
 		this.game = game;
 		this.radius = 20;
-		this.turretAngle = 90;		
-		this.center = {x: peaks[4].x , y: peaks[4].y };
+		this.velocity = {x:4, y:4};
+		this.center = {x: peaks[start].x , y: peaks[start].y };
+		this.bulletLimiter = 3;
+		
+		this.turret = new Turret(90);
+
 		var self = this;
 		this.keys = new Keyboard();
-
 
 	};
 
 	Tank.prototype.update = function(game) {
 		if(this.keys.isDown(this.keys.KEYS.LEFT)) {
-			this.turretAngle -= 2;
+			this.turret.angle -= 2;
 		}
 		else if(this.keys.isDown(this.keys.KEYS.RIGHT)) {
-			this.turretAngle += 2;
+			this.turret.angle += 2;
+		}
+		else if(this.keys.isDown(this.keys.KEYS.UP)) {
+			//this.turret.velocity += 1;
+			this.velocity.x += (this.velocity.x < 10) ? 0.2 : -0.2;
+			this.velocity.y += (this.velocity.y < 10) ? 0.2 : -0.2;
+		}
+
+		else if(this.keys.isDown(this.keys.KEYS.DOWN)) {
+			this.velocity.x -= (this.velocity.x > 0) ? 0.2 : -0.2;
+			this.velocity.y -= (this.velocity.y > 0) ? 0.2 : -0.2;
+
 		}
 		else if(this.keys.isDown(this.keys.KEYS.FIRE)) {
-			console.log("Fire");
-			var bullet = new Bullet(game,this.center,this.turretAngle);
+			if(this.bulletLimiter == 0) {
+			var bullet = new Bullet(game,this.turret.tip,this.turret.angle,this.velocity);
 			game.bodies.push(bullet);
+			this.bulletLimiter=3;
+			} else { this.bulletLimiter--; }
 		} 
 	};
 
@@ -100,17 +122,26 @@
 		// period + starting angle offset
 		var angleUnit = (2*Math.PI)/360.0;
 
-		screen.lineTo(this.center.x+30*Math.cos(angleUnit*this.turretAngle),this.center.y+30*-Math.sin(angleUnit*this.turretAngle));
+		this.turret.tip.x = this.center.x+30*Math.cos(angleUnit*this.turret.angle);
+		this.turret.tip.y = this.center.y+30*-Math.sin(angleUnit*this.turret.angle);
+		screen.lineTo(this.turret.tip.x,this.turret.tip.y);
 		screen.lineWidth = 5;
 		screen.strokeStyle = 'red';
 		screen.stroke();
 
 	};
 
-	/* Bullet logic */
-	function Bullet(game,center,angle) {
+	/* Turret */
+	function Turret(angle) {
 		this.angle = angle;
-		this.velocity = {x:3,y:8};
+		this.tip = {x:null,y:null};
+	};
+
+	/* Bullet logic */
+	function Bullet(game,center,angle,velocity) {
+		this.angle = angle;
+		//this.velocity = {x:4,y:8};
+		this.velocity = { x:velocity.x, y:velocity.y};
 		this.center = { x:center.x,y:center.y };
 	};
 
@@ -126,6 +157,7 @@
 		screen.fillStyle = 'black';
 		screen.fill();
 	};
+
 
 
 
@@ -174,6 +206,7 @@
 		this.points.forEach(function(val,key) {
 			screen.lineTo(val.x,val.y);
 		});
+
 		screen.lineTo(size.x,size.y);
       	screen.lineWidth = 5;
       	screen.strokeStyle = 'green';
@@ -191,7 +224,7 @@
 	/* Keyboard handler */
 	function Keyboard() {
 		var keyState = {};
-		this.KEYS = { LEFT: 37, RIGHT:39, FIRE:32 };
+		this.KEYS = { UP: 38, DOWN: 40, LEFT: 37, RIGHT:39, FIRE:32 };
 
 		window.onkeydown = function(e) {
 			keyState[e.keyCode] = true;
@@ -208,9 +241,41 @@
 
 	};
 
-
 	/* Helpers */
+	var isCollidingWithMountain = function(screen,b1,mtn) {
 
-	var game = new Game("myGame");
+
+		// if b1 y coord is over max mountain height, ignore it
+		if(b1.y <  400) {
+			return true;
+		} else {
+			var nearPeak = Math.floor(b1.center.x/mtn.step);
+			console.log("Nearest Peak height:",nearPeak,mtn.points[nearPeak]);
+			console.log("Bullet x,y:",b1.center.x,b1.center.y);
+
+			//console.log("A bullet is under max mountain height!");
+		}
+
+		//var col = points.every(function(res,key) {
+			//return b1.center.y > res.y && b1.center.x == res.x;
+		//});
+
+		/*if(!col) {
+			// draw crater
+			screen.arc(b1.center.x, b1.center.y, 10,0, 2 * Math.PI, false);
+			screen.fill();
+			screen.fillStyle = 'blue';
+			// stop it
+      		//b1.velocity.x =0;
+      		//b1.velocity.y =0;
+		}*/
+
+
+	};
+
+
+	 window.addEventListener('load', function() {
+		var game = new Game("myGame");
+	 });
 })();
 
