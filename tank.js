@@ -51,13 +51,24 @@
 		var self = this;
 		this.tank.update(this);
 		this.bodies.forEach(function(val,key) { 
- 			val.update();
+ 			val.update(self);
 		});
+
+		isTimeToMakePlane(self);
+
+
+		var notCurrentlyColliding = function(b1) {
+			return self.bodies.filter(function(b2) { return bodiesColliding(b1,b2); } ).length === 0;
+		};
+
+
+
 		// get rid of things that are out of lower, side bounds
 		this.bodies = this.bodies.filter(function(val) { 
 			var offScreen = (val.center.y > self.size.y || val.center.x < 0 || val.center.x > self.size.x) ? false : true;
-			var collision = isCollidingWithMountain(null,val,self.mtns);
-			return offScreen && collision;
+			var collisionMtn = isCollidingWithMountain(null,val,self.mtns);
+			var collisionBodies = notCurrentlyColliding(val);
+			return offScreen && collisionMtn && collisionBodies;
 		});
 
 	};
@@ -65,11 +76,14 @@
 	Game.prototype.draw = function(screen) {
 
 		var self = this;
+		
 		this.mtns.draw(screen,this.size);
 		this.tank.draw(screen);
+
 		this.bodies.forEach(function(val,key) { 
 			val.draw(screen);
 		});
+
 
 	};
 
@@ -80,7 +94,7 @@
 		this.radius = 20;
 		this.velocity = {x:4, y:4};
 		this.center = {x: peaks[start].x , y: peaks[start].y };
-		this.bulletLimiter = 3;
+		this.bulletLimiter = 10;
 		
 		this.turret = new Turret(90);
 		this.meter = new PowerMeter(screen,this.velocity);
@@ -92,13 +106,13 @@
 
 	Tank.prototype.update = function(game) {
 		if(this.keys.isDown(this.keys.KEYS.RIGHT)) {
-			console.log("turret angle",this.turret.angle);
+			//console.log("turret angle",this.turret.angle);
 			this.turret.angle -= (this.turret.angle <= 0) ? 0 : 2;
-			console.log("new turret angle",this.turret.angle);
+			//console.log("new turret angle",this.turret.angle);
 
 		}
 		else if(this.keys.isDown(this.keys.KEYS.LEFT)) {
-			console.log("turret angle",this.turret.angle);
+			//console.log("turret angle",this.turret.angle);
 			this.turret.angle += (this.turret.angle >= 180) ? 0 : 2;
 		}
 		else if(this.keys.isDown(this.keys.KEYS.UP)) {
@@ -115,7 +129,7 @@
 			if(this.bulletLimiter == 0) {
 			var bullet = new Bullet(game,this.turret.tip,this.turret.angle,this.velocity);
 			game.bodies.push(bullet);
-			this.bulletLimiter=3;
+			this.bulletLimiter=10;
 			} else { this.bulletLimiter--; }
 		} 
 	};
@@ -125,12 +139,14 @@
 		//this turretAngle = (angle > 0 || angle < 360) ? angle : 90 ;  
 
 		// tank base
+
 		screen.beginPath();
 		screen.arc(this.center.x,this.center.y,this.radius,Math.PI,false);
-		screen.closePath();
-		screen.lineWidth = 5;
 		screen.fillStyle = 'red';
+		screen.lineWidth = 5;
 		screen.fill();
+		screen.closePath();
+
 
 		// turret angle
 		screen.beginPath();
@@ -138,14 +154,13 @@
 
 		// period + starting angle offset
 		var angleUnit = (2*Math.PI)/360.0;
-
 		this.turret.tip.x = this.center.x+30*Math.cos(angleUnit*this.turret.angle);
 		this.turret.tip.y = this.center.y+30*-Math.sin(angleUnit*this.turret.angle);
+		
+		screen.strokeStyle = 'red';
 		screen.lineTo(this.turret.tip.x,this.turret.tip.y);
 		screen.lineWidth = 5;
-		screen.strokeStyle = 'red';
 		screen.stroke();
-
 		this.meter.draw();
 
 	};
@@ -159,12 +174,12 @@
 	/* Bullet logic */
 	function Bullet(game,center,angle,velocity) {
 		this.angle = angle;
-		//this.velocity = {x:4,y:8};
+		this.size = { x:3, y:3}; 
 		this.velocity = { x:velocity.x, y:velocity.y};
 		this.center = { x:center.x,y:center.y };
 	};
 
-	Bullet.prototype.update = function() {
+	Bullet.prototype.update = function(game) {
 		var angleUnit = (2*Math.PI)/360.0;
 		this.center.x +=Math.cos(this.angle*angleUnit)*this.velocity.x;
 		this.center.y +=-Math.sin(this.angle*angleUnit)*this.velocity.y;
@@ -172,12 +187,33 @@
 	};
 
 	Bullet.prototype.draw = function(screen) {
-		screen.rect(this.center.x,this.center.y,3,3);
 		screen.fillStyle = 'black';
+		screen.rect(this.center.x,this.center.y,this.size.x,this.size.y);
 		screen.fill();
 	};
 
+	/* Airplane */
 
+	function Plane() {
+		this.size = { x:20, y:10}; 
+		this.center =  { x:0, y:100 };
+		this.velocity = { x:3, y:0 };
+	};
+
+	Plane.prototype.draw = function(screen) {
+		screen.rect(this.center.x,this.center.y,this.size.x,this.size.y);
+	};
+
+	Plane.prototype.update = function(game) {
+
+		this.center.x += this.velocity.x;
+		this.center.y += Math.sin(this.center.x/10);
+
+		if(Math.random() > 0.993) {
+			 game.bodies.push(new Bullet(game,{x:this.center.x-10,y:this.center.y+10},90,{x:this.velocity.x, y:2}));
+		}
+
+	};
 
 
 	/* mountains, background */
@@ -314,12 +350,28 @@
 
 			return (b1.center.y >= impactPoint ) ? false : true; 
 		}
+	};
 
-
+	var bodiesColliding = function (b1,b2) {
+		return !(
+		b1 === b2 
+		|| b1.center.x + b1.size.x / 2 < b2.center.x -b2.size.x / 2
+		|| b1.center.y + b1.size.y / 2 < b2.center.y - b2.size.y / 2
+		|| b1.center.x - b1.size.x / 2 > b2.center.x + b2.size.x / 2
+		|| b1.center.y - b1.size.y / 2 > b2.center.y + b2.size.y / 2
+		);
 
 	};
 
+	/* Make new planes */
+	var isTimeToMakePlane = function(self) {
+		if(Math.random() > 0.99) {
+			self.bodies.push(new Plane());
+		}
+	};
 
+
+	/* Init */
 	 window.addEventListener('load', function() {
 		var game = new Game("myGame");
 	 });
