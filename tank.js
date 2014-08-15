@@ -36,6 +36,9 @@
 		// initialize a player
 		this.tank = new Tank(self,screen,this.mtns.getPeaks(),Math.floor(Math.random()*8));
 
+		// init power indicator
+		this.meter = new PowerMeter(this.tank.velocity);
+
 		var tick = function() {
 			self.update();
 			self.draw(screen);
@@ -56,18 +59,19 @@
 
 		isTimeToMakePlane(self);
 
-
 		var notCurrentlyColliding = function(b1) {
 			return self.bodies.filter(function(b2) { return bodiesColliding(b1,b2); } ).length === 0;
 		};
 
-
-
-		// get rid of things that are out of lower, side bounds
 		this.bodies = this.bodies.filter(function(val) { 
-			var offScreen = (val.center.y > self.size.y || val.center.x < 0 || val.center.x > self.size.x) ? false : true;
+
+			// get rid of things that are out of lower, side bounds
+			var offScreen = (val.center.y > self.size.y + 10 || val.center.x < -30 || val.center.x > self.size.x+30) ? false : true;
+			// get rid of things that are colliding with mountains
 			var collisionMtn = isCollidingWithMountain(null,val,self.mtns);
+			// get rid of bodies that are colliding with eachother 
 			var collisionBodies = notCurrentlyColliding(val);
+			// if everything is true you're all good!
 			return offScreen && collisionMtn && collisionBodies;
 		});
 
@@ -79,11 +83,10 @@
 		
 		this.mtns.draw(screen,this.size);
 		this.tank.draw(screen);
-
+		this.meter.draw(screen);
 		this.bodies.forEach(function(val,key) { 
 			val.draw(screen);
 		});
-
 
 	};
 
@@ -97,7 +100,6 @@
 		this.bulletLimiter = 10;
 		
 		this.turret = new Turret(90);
-		this.meter = new PowerMeter(screen,this.velocity);
 
 		var self = this;
 		this.keys = new Keyboard();
@@ -161,7 +163,6 @@
 		screen.lineTo(this.turret.tip.x,this.turret.tip.y);
 		screen.lineWidth = 5;
 		screen.stroke();
-		this.meter.draw();
 
 	};
 
@@ -209,7 +210,7 @@
 		this.center.x += this.velocity.x;
 		this.center.y += Math.sin(this.center.x/10);
 
-		if(Math.random() > 0.993) {
+		if(Math.random() > 0.99) {
 			 game.bodies.push(new Bullet(game,{x:this.center.x-10,y:this.center.y+10},90,{x:this.velocity.x, y:2}));
 		}
 
@@ -298,17 +299,16 @@
 
 	/* Power Meter */
 
-	function PowerMeter(screen,vel) {
-		this.screen = screen;
+	function PowerMeter(vel) {
 		this.size = { height:100, width: 60 };
 		this.velocity = vel;
 
 	};
 
-	PowerMeter.prototype.draw = function() {
-			this.screen.fillStyle = "#ffff00";
-			this.screen.rect(20,20,30*this.velocity.x,20);
-			this.screen.fill();
+	PowerMeter.prototype.draw = function(screen) {
+			screen.fillStyle = "#ffff00";
+			screen.rect(20,20,30*this.velocity.x,20);
+			screen.fill();
 
 	};
 
