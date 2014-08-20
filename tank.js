@@ -22,6 +22,7 @@
 		this.size = {x: can.width, y: can.height };
 		this.playable = true; // game is not over
 		this.score = 0; // score
+		this.maxMtnHeight = 200;
 
 		this.bodies = [];
 
@@ -29,7 +30,8 @@
 		this.gravity = -2;
 
 		// initiate and draw new background
-		this.mtns = new Mountains();
+
+		this.mtns = new Mountains(this.maxMtnHeight);
 		this.mtns.generate(screen,this.size);
 
 
@@ -37,7 +39,7 @@
 		this.tank = new Tank(self,screen,this.mtns.getPeaks(),Math.floor(Math.random()*8));
 
 		// init power indicator
-		this.meter = new PowerMeter(this.tank.velocity);
+		this.meter = new PowerMeter();
 
 		var tick = function() {
 			self.update();
@@ -51,39 +53,66 @@
 	};
 
 	Game.prototype.update = function() {
-		var self = this;
-		this.tank.update(this);
-		this.bodies.forEach(function(val,key) { 
- 			val.update(self);
-		});
+		// if not a game over
+		if(this.playable) {
 
-		isTimeToMakePlane(self);
+			var self = this;
+			this.tank.update(this);
+			this.meter.update(this.tank.velocity);
+			// is the player alive
+			var isPlayerDead = function(i) {
+				if(i.center.y > self.size.y-self.maxMtnHeight) {
+					var collisionWithPlayer = bodiesColliding(self.tank,i);
+					if(collisionWithPlayer) { delete self.tank; self.playable = false; }
+				}
+			 };
 
-		var notCurrentlyColliding = function(b1) {
-			return self.bodies.filter(function(b2) { return bodiesColliding(b1,b2); } ).length === 0;
-		};
 
-		this.bodies = this.bodies.filter(function(val) { 
+			this.bodies.forEach(function(val,key) { 
+	 			val.update(self);
+	 			isPlayerDead(val);
+			});
 
-			// get rid of things that are out of lower, side bounds
-			var offScreen = (val.center.y > self.size.y + 10 || val.center.x < -30 || val.center.x > self.size.x+30) ? false : true;
-			// get rid of things that are colliding with mountains
-			var collisionMtn = isCollidingWithMountain(null,val,self.mtns);
-			// get rid of bodies that are colliding with eachother 
-			var collisionBodies = notCurrentlyColliding(val);
-			// if everything is true you're all good!
-			return offScreen && collisionMtn && collisionBodies;
-		});
+			isTimeToMakePlane(self);
+
+			var notCurrentlyColliding = function(b1) {
+				return self.bodies.filter(function(b2) { return bodiesColliding(b1,b2); } ).length === 0;
+			};
+
+			this.bodies = this.bodies.filter(function(val) { 
+
+				// get rid of things that are out of lower, side bounds
+				var offScreen = (val.center.y > self.size.y + 10 || val.center.x < -30 || val.center.x > self.size.x+30) ? false : true;
+				// get rid of things that are colliding with mountains
+				var collisionMtn = isCollidingWithMountain(null,val,self.mtns);
+				// get rid of bodies that are colliding with eachother 
+				var collisionBodies = notCurrentlyColliding(val);
+
+				// if everything is true you're all good!
+
+				return offScreen && collisionMtn && collisionBodies;
+			});
+
+		} 
+		// game over
+		else {
+			document.getElementById("gameOver").style.display="block";
+		}
+
 
 	};
 
 	Game.prototype.draw = function(screen) {
 
 		var self = this;
-		
+
 		this.mtns.draw(screen,this.size);
-		this.tank.draw(screen);
-		this.meter.draw(screen);
+
+		if(this.playable) {
+			this.tank.draw(screen);
+			this.meter.draw(screen);
+		}
+
 		this.bodies.forEach(function(val,key) { 
 			val.draw(screen);
 		});
@@ -96,6 +125,7 @@
 		this.game = game;
 		this.radius = 20;
 		this.velocity = {x:4, y:4};
+		this.size = {x:this.radius,y:this.radius}
 		this.center = {x: peaks[start].x , y: peaks[start].y };
 		this.bulletLimiter = 10;
 		
@@ -134,6 +164,9 @@
 			this.bulletLimiter=10;
 			} else { this.bulletLimiter--; }
 		} 
+		else {
+			// do nothing
+		}
 	};
 
 	Tank.prototype.draw = function(screen,angle) {
@@ -218,9 +251,10 @@
 
 
 	/* mountains, background */
-	function Mountains() {
+	function Mountains(height) {
 		this.step = 60; // peaks in steps 
 		this.points = []; // points of peaks
+		this.height = height;
 	};
 
 	// draw initial mountain range
@@ -234,7 +268,7 @@
 		var i = this.step;
 		
 		while(i <= size.x) {
-			var peak = size.y-Math.random()*200;
+			var peak = size.y-Math.random()*this.height;
 			this.points.push({ x:i, y:peak });
 			screen.lineTo(i,peak);
 			i += this.step;
@@ -299,21 +333,22 @@
 
 	/* Power Meter */
 
-	function PowerMeter(vel) {
-		this.size = { height:100, width: 60 };
-		this.velocity = vel;
+	function PowerMeter() {
+		this.velocity = { x:1,y:0 };
+		this.size = { height:100, width: this.velocity.x };
 
 	};
 
 	PowerMeter.prototype.draw = function(screen) {
+			screen.beginPath();
 			screen.fillStyle = "#ffff00";
 			screen.rect(20,20,30*this.velocity.x,20);
 			screen.fill();
 
 	};
 
-	PowerMeter.prototype.update = function() {
-
+	PowerMeter.prototype.update = function(vel) {
+		this.velocity = vel
 	};
 
 	/* Helpers */
@@ -362,6 +397,7 @@
 		);
 
 	};
+
 
 	/* Make new planes */
 	var isTimeToMakePlane = function(self) {

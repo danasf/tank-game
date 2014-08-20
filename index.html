@@ -2,9 +2,16 @@
 <html>
 <head>
 	<title>Tank Game</title>
+	<style type="text/css">
+		#gameOver { display: none; }
+	</style>
 </head>
 <body>
 	<h1>Tank Game</h1>
+	<div id="gameOver">
+		<h2>GAME OVER</h2>
+		<p><a href="./index.html">Refresh</a> or press F5 to try again!</p>
+	</div>
 	<canvas id="myGame" width="1000" height="600"></canvas>
 	<script type="text/javascript" src="./tank.js"></script>
 </body>
