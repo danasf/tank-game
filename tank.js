@@ -67,18 +67,9 @@
 				}
 			 };
 
-
-			this.bodies.forEach(function(val,key) { 
-	 			val.update(self);
-	 			isPlayerDead(val);
-			});
-
-			isTimeToMakePlane(self);
-
 			var notCurrentlyColliding = function(b1) {
 				return self.bodies.filter(function(b2) { return bodiesColliding(b1,b2); } ).length === 0;
 			};
-
 			this.bodies = this.bodies.filter(function(val) { 
 
 				// get rid of things that are out of lower, side bounds
@@ -92,6 +83,16 @@
 
 				return offScreen && collisionMtn && collisionBodies;
 			});
+
+
+			this.bodies.forEach(function(val,key) { 
+	 			val.update(self);
+	 			isPlayerDead(val);
+			});
+
+			isTimeToMakePlane(self);
+
+		
 
 		} 
 		// game over
@@ -222,8 +223,7 @@
 
 	Bullet.prototype.draw = function(screen) {
 		screen.fillStyle = 'black';
-		screen.rect(this.center.x,this.center.y,this.size.x,this.size.y);
-		screen.fill();
+		screen.fillRect(this.center.x,this.center.y,this.size.x,this.size.y);
 	};
 
 	/* Airplane */
@@ -235,7 +235,8 @@
 	};
 
 	Plane.prototype.draw = function(screen) {
-		screen.rect(this.center.x,this.center.y,this.size.x,this.size.y);
+		screen.fillStyle = "black"
+		screen.fillRect(this.center.x,this.center.y,this.size.x,this.size.y);
 	};
 
 	Plane.prototype.update = function(game) {
@@ -342,8 +343,7 @@
 	PowerMeter.prototype.draw = function(screen) {
 			screen.beginPath();
 			screen.fillStyle = "#ffff00";
-			screen.rect(20,20,30*this.velocity.x,20);
-			screen.fill();
+			screen.fillRect(20,20,30*this.velocity.x,20);
 
 	};
 
