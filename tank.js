@@ -41,6 +41,8 @@
 		// init power indicator
 		this.meter = new PowerMeter();
 
+		this.bodies.push(new Enemy(this.mtns.getPeaks()));
+
 		var tick = function() {
 			self.update();
 			self.draw(screen);
@@ -140,13 +142,13 @@
 	Tank.prototype.update = function(game) {
 		if(this.keys.isDown(this.keys.KEYS.RIGHT)) {
 			//console.log("turret angle",this.turret.angle);
-			this.turret.angle -= (this.turret.angle <= 0) ? 0 : 2;
+			this.turret.angle -= (this.turret.angle < 0) ? 0 : 2;
 			//console.log("new turret angle",this.turret.angle);
 
 		}
 		else if(this.keys.isDown(this.keys.KEYS.LEFT)) {
 			//console.log("turret angle",this.turret.angle);
-			this.turret.angle += (this.turret.angle >= 180) ? 0 : 2;
+			this.turret.angle += (this.turret.angle > 180) ? 0 : 2;
 		}
 		else if(this.keys.isDown(this.keys.KEYS.UP)) {
 			this.velocity.x += (this.velocity.x < 10) ? 0.2 : -0.2;
@@ -172,8 +174,6 @@
 
 	Tank.prototype.draw = function(screen,angle) {
 
-		//this turretAngle = (angle > 0 || angle < 360) ? angle : 90 ;  
-
 		// tank base
 
 		screen.beginPath();
@@ -197,6 +197,7 @@
 		screen.lineTo(this.turret.tip.x,this.turret.tip.y);
 		screen.lineWidth = 5;
 		screen.stroke();
+		screen.closePath();
 
 	};
 
@@ -250,6 +251,59 @@
 
 	};
 
+
+	/* Enemy Tank */
+	function Enemy(peaks) {
+
+		this.radius = 20;
+		this.velocity = {x:3, y:3};
+		this.size = {x:this.radius,y:this.radius}
+		this.center = {x: peaks[4].x , y: peaks[4].y-5 };
+		this.bulletLimiter = 10;
+
+		this.turret = new Turret(45);
+		var self = this;
+		
+	};
+
+	Enemy.prototype.draw = function(screen) {
+		screen.beginPath();
+		screen.arc(this.center.x,this.center.y,this.radius,Math.PI,false);
+		screen.fillStyle = 'cyan';
+		screen.lineWidth = 5;
+		screen.fill();
+		screen.closePath();
+
+
+		// turret angle
+		screen.beginPath();
+		screen.moveTo(this.center.x,this.center.y);
+
+		// period + starting angle offset
+		var angleUnit = (2*Math.PI)/360.0;
+		this.turret.tip.x = this.center.x+30*Math.cos(angleUnit*this.turret.angle);
+		this.turret.tip.y = this.center.y+30*-Math.sin(angleUnit*this.turret.angle);
+		
+		screen.strokeStyle = 'cyan';
+		screen.lineTo(this.turret.tip.x,this.turret.tip.y);
+		screen.lineWidth = 5;
+		screen.stroke();
+		screen.closePath();
+		if(Math.random() > 0.99) {
+			this.turret.angle = Math.floor(Math.random()*180);
+		}
+
+	};
+
+	Enemy.prototype.update = function(game) {
+
+		if(Math.random() > 0.96) {
+			 var angleUnit = (2*Math.PI)/360.0;
+			 game.bodies.push(new Bullet(game,this.turret.tip,this.turret.angle,this.velocity));
+
+		}
+
+	};
 
 	/* mountains, background */
 	function Mountains(height) {
